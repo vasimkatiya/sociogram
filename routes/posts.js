@@ -12,7 +12,7 @@ const upload = multer({
 
 const postRouter = Router();
 
-postRouter.post('posts',authValid,upload.single("image"),createPostController);
+postRouter.post('/posts',authValid,upload.single("file"),createPostController);
 postRouter.get('/posts',getPostController)
 
 module.exports = postRouter;

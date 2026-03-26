@@ -3,21 +3,26 @@ const { uploadFiles } = require("../services/ImageKit");
 
 exports.createPostController = async (req,res)=>{
 
-    const userId = req.user.id;
+    const userId = req.user?.id;
     const content = req.body.content;
     const file = req.file;
 
-    if(!userId || !content || !file ){
+    if(!userId && (!content || !file) ){
         return res.status(400).json({
             success:false,
             message:'fill all the fields.'
         });
     };
 
-    const result = await uploadFiles(file.buffer.toString('base64'));
+    let image_url = null;
+    let thumbnail_url = null;
 
-    const image_url = result.url;
-    const thumbnail_url = result.thumbnailUrl;
+    if(file){
+        const result = await uploadFiles(file.buffer.toString('base64'));
+        
+        image_url = result.url;
+        thumbnail_url = result.thumbnailUrl;
+    }
 
     const CreatePost = await pool.query('INSERT INTO posts (user_id,content,image_url,thumbnail_url) VALUES($1,$2,$3,$4)RETURNING *;',[userId,content,image_url,thumbnail_url]);
 
