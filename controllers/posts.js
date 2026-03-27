@@ -31,7 +31,8 @@ exports.createPostController = async (req,res)=>{
     res.status(201).json({
         success:true,
         message:'post uploaded successfully.',
-        newPost:newPost
+        newPost:newPost,
+        user_id:req.user?.id
     });
     
 }
@@ -49,7 +50,8 @@ exports.getPostController = async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'posts fetched successfully.',
-    posts: fetchPosts.rows
+    posts: fetchPosts.rows,
+    user_id:req.user?.id
   });
 };
 
@@ -69,6 +71,7 @@ exports.singlePostController = async (req,res)=>{
         success:true,
         message:'single post fetched successfully.',
         post:checkPost.rows[0],
+        user_id:req.user?.id
     });
 
 }
@@ -100,7 +103,8 @@ exports.deletePostController = async (req,res)=>{
 
     res.status(200).json({
         success:true,
-        message:'post deleted successfully.'
+        message:'post deleted successfully.',
+        user_id:req.user?.id
     })
 
 }
