@@ -7,7 +7,7 @@ exports.createPostController = async (req,res)=>{
     const content = req.body.content;
     const file = req.file;
 
-    if(!userId && (!content || !file) ){
+    if(!userId || (!content && !file) ){
         return res.status(400).json({
             success:false,
             message:'fill all the fields.'
@@ -36,24 +36,71 @@ exports.createPostController = async (req,res)=>{
     
 }
 
-exports.getPostController = async (req,res)=>{
+exports.getPostController = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10;
+  const offset = (page - 1) * limit;
 
-    const fetchPosts = await pool.query('SELECT * FROM posts ORDER BY created_at DESC;');
+  const fetchPosts = await pool.query(
+    'SELECT * FROM posts ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+    [limit, offset]
+  );
 
-    if(fetchPosts.rows.length === 0){
-        return res.status(401).json({
+  res.status(200).json({
+    success: true,
+    message: 'posts fetched successfully.',
+    posts: fetchPosts.rows
+  });
+};
+
+exports.singlePostController = async (req,res)=>{
+    const {id} = req.params;
+
+    const checkPost = await pool.query('SELECT * FROM posts WHERE id = $1 ;',[id]);
+
+    if(checkPost.rows.length === 0){
+        return res.status(404).json({
             success:false,
-            message:'post not created.',
-            posts:[],
-        })
+            message:'post is not found or invalid post id'
+        });
     }
-
-    const allPosts = fetchPosts.rows;
 
     res.status(200).json({
         success:true,
-        message:'all posts fetched successfully.',
-        posts:allPosts
+        message:'single post fetched successfully.',
+        post:checkPost.rows[0],
     });
+
+}
+
+exports.deletePostController = async (req,res)=>{
+    const {id} = req.params;
+    const userId = req.user?.id;
+    const checkPost = await pool.query('SELECT * FROM posts WHERE id = $1 ;',[id]);
+
+      if (checkPost.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+
+     if (checkPost.rows[0].user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to delete this post",
+      });
+    }
+
+
+    if(id){
+        await pool.query('DELETE FROM posts WHERE id = $1 ;',[id]);
+    }
+
+    res.status(200).json({
+        success:true,
+        message:'post deleted successfully.'
+    })
 
 }
