@@ -23,7 +23,9 @@ exports.registerController = async (req,res) =>{
 
     console.log(result)
 
-    const avatar_url = result.url;
+    const avatar_url = result.thumbnailUrl;
+
+    console.log(`username: ${username} password : ${hashPassword} , avatar: ${avatar_url}`)
 
     const newUser = await pool.query('INSERT INTO users (username,password,bio,avatar_url) VALUES($1,$2,$3,$4);',[username,hashPassword,bio,avatar_url]);
 

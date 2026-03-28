@@ -8,6 +8,7 @@ const likeRouter = require('./routes/likes');
 const searchRouter = require('./routes/search');
 const userRouter = require('./routes/profile');
 const followRouter = require('./routes/follow');
+const main = require('./db/generate');
 require('dotenv').config();
 
 const port = process.env.PORT || 3000 ;
@@ -28,5 +29,6 @@ app.use('/api/users',userRouter);
 app.use('/api',followRouter)
 
 app.listen(port,()=>{
+    main();
     console.log('server is running...')
 })
