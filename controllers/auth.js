@@ -1,5 +1,5 @@
-const pool = require("../db/pool");
 const bcrypt = require('bcryptjs');
+const pool = require("../db/pool");
 const { uploadFiles } = require("../services/ImageKit");
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
