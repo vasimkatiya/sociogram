@@ -16,10 +16,13 @@ const port = process.env.PORT || 3000 ;
 
 const app = express();
 
+const cors = require("cors");
+
 app.use(cors({
-    origin:"*",
-    credentials:true
-}))
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({extended:false}));
@@ -34,5 +37,6 @@ app.use('/api',followRouter)
 
 app.listen(port,()=>{
     main();
+    console.log("server is running...")
     console.log('server is running...')
 })
