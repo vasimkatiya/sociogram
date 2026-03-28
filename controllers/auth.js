@@ -62,10 +62,7 @@ require('dotenv').config();
 //   }
 // };
 
-const bcrypt = require('bcryptjs');
-const pool = require("../db/pool"); // correct import
-const { uploadFiles } = require("../services/ImageKit");
-require('dotenv').config();
+
 
 exports.registerController = async (req, res) => {
   try {
