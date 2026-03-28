@@ -8,6 +8,7 @@ const likeRouter = require('./routes/likes');
 const searchRouter = require('./routes/search');
 const userRouter = require('./routes/profile');
 const followRouter = require('./routes/follow');
+const cors = require('cors');
 const main = require('./db/generate');
 require('dotenv').config();
 
@@ -15,7 +16,10 @@ const port = process.env.PORT || 3000 ;
 
 const app = express();
 
-
+app.use(cors({
+    origin:"*",
+    credentials:true
+}))
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({extended:false}));
