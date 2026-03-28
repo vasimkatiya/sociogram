@@ -1,35 +1,50 @@
 const pool = require("../db/pool");
 
-exports.toggleLikesController = async (req,res)=>{
+exports.toggleLikesController = async (req, res) => {
     const userId = req.user?.id;
-    const {postId} = req.body;
+    const { postId } = req.body;
 
-    if(!userId || !postId){
+    if (!userId || !postId) {
         return res.status(400).json({
-            success:false,
-            message:'userId or postId missing...'
-        })
+            success: false,
+            message: 'userId or postId missing...'
+        });
     }
 
-    //check already like
+    // Check if user already liked the post
+    const check = await pool.query(
+        'SELECT * FROM likes WHERE user_id = $1 AND post_id = $2;',
+        [userId, postId]
+    );
 
-    const check = await pool.query('SELECT * FROM likes WHERE user_id = $1 AND post_id = $2;',[userId,postId]);
+    let message = '';
+    if (check.rows.length > 0) {
+        // If liked, remove the like
+        await pool.query(
+            'DELETE FROM likes WHERE user_id = $1 AND post_id = $2;',
+            [userId, postId]
+        );
+        message = 'Post unliked';
+    } else {
+        // If not liked, add a like
+        await pool.query(
+            'INSERT INTO likes (user_id, post_id) VALUES ($1, $2);',
+            [userId, postId]
+        );
+        message = 'Post liked';
+    }
 
-    if(check.rows.length > 0){
-        await pool.query('DELETE FROM likes WHERE user_id = $1 AND post_id = $2;',[userId,postId]);
-        return res.status(200).json({
-            success:true,
-            message:'post unliked',
-        });
-    };
-
-    //if not like then add like.
-
-    const newLike = await pool.query('INSERT INTO likes (user_id,post_id) VALUES($1,$2);',[userId,postId]);
+    // Fetch current total likes count for the post
+    const likeCountResult = await pool.query(
+        'SELECT COUNT(*) FROM likes WHERE post_id = $1;',
+        [postId]
+    );
+    const likeCount = parseInt(likeCountResult.rows[0].count);
 
     res.status(200).json({
-        success:true,
-        message:'post liked'
-    })
-
-}
+        success: true,
+        message: message,
+        likesCount: likeCount,
+        userId:userId
+    });
+};
