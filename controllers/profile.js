@@ -37,13 +37,30 @@ exports.myProfileController = async(req,res)=>{
         });
     }
 
+   
+const followersResult = await pool.query(
+  'SELECT COUNT(*) FROM follows WHERE following_id = $1',
+  [userId]
+);
+
+
+const followingResult = await pool.query(
+  'SELECT COUNT(*) FROM follows WHERE follower_id = $1',
+  [userId]
+);
+
+const followersCount = parseInt(followersResult.rows[0].count);
+const followingCount = parseInt(followingResult.rows[0].count);
+
     const posts = allPost.rows;
 
     res.status(200).json({
         success:true,
         message:'posts fetched',
         posts:posts,
-        user:user
+        user:user,
+        followersCount:followersCount,
+        followingCount:followingCount,
     })
 
 }
@@ -86,11 +103,26 @@ exports.usersProfileController = async(req,res)=>{
 
     const posts = allPost.rows;
 
+const followersResult = await pool.query(
+  'SELECT COUNT(*) FROM follows WHERE following_id = $1',
+  [userId]
+);
+
+const followingResult = await pool.query(
+  'SELECT COUNT(*) FROM follows WHERE follower_id = $1',
+  [userId]
+);
+
+const followersCount = parseInt(followersResult.rows[0].count);
+const followingCount = parseInt(followingResult.rows[0].count);
+
     res.status(200).json({
         success:true,
         message:'posts fetched',
         posts:posts,
-        user:user
+        user:user,
+        followersCount:followersCount,
+        followingCount:followingCount,
     })
 
 }
