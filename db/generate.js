@@ -4,8 +4,12 @@ const { Client } = require("pg");
 
 const main = async () => {
   const client = new Client({
-    connectionString: process.env.DB_URL,
-  });
+  connectionString: process.env.DB_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
 
   try {
     await client.connect();
