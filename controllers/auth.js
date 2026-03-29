@@ -64,6 +64,12 @@ require('dotenv').config();
 
 
 
+const bcrypt = require('bcryptjs');
+const pool = require("../db/pool");
+const { uploadFiles } = require("../services/ImageKit");
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
 exports.registerController = async (req, res) => {
   try {
     console.log("REQ.BODY:", req.body);
@@ -72,10 +78,10 @@ exports.registerController = async (req, res) => {
     const { username, password, bio } = req.body;
     const file = req.file;
 
+    // Basic validation
     if (!username || !password) {
       return res.status(400).json({ success: false, message: "Username & password required" });
     }
-
     if (!file) {
       return res.status(400).json({ success: false, message: "Avatar is required" });
     }
@@ -86,24 +92,39 @@ exports.registerController = async (req, res) => {
       return res.status(400).json({ success: false, message: "Username already taken" });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Upload avatar
+    // Upload avatar to ImageKit
     let avatar_url = null;
-    const uploadResult = await uploadFiles(file.buffer.toString('base64'));
-    if(uploadResult){
-      avatar_url = uploadResult.url;
+    try {
+      const uploadResult = await uploadFiles(file.buffer.toString('base64'));
+      console.log("UPLOAD RESULT:", uploadResult);
+      if (uploadResult && uploadResult.url) {
+        avatar_url = uploadResult.url;
+      } else if (uploadResult && uploadResult.thumbnailUrl) {
+        avatar_url = uploadResult.thumbnailUrl;
+      }
+    } catch (err) {
+      console.error("IMAGEKIT UPLOAD ERROR:", err);
+      // fallback to null if upload fails
+      avatar_url = null;
     }
 
+    // Insert new user
     const newUser = await pool.query(
       "INSERT INTO users (username, password, bio, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *",
       [username, hashedPassword, bio || "", avatar_url]
     );
 
-    res.status(201).json({ success: true, user: newUser.rows[0], message: "User created successfully" });
+    res.status(201).json({
+      success: true,
+      user: newUser.rows[0],
+      message: "User created successfully"
+    });
 
   } catch (err) {
-    console.error("REGISTER ERROR:", err); // <-- look here
+    console.error("REGISTER ERROR:", err);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
