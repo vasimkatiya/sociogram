@@ -89,8 +89,11 @@ exports.registerController = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Upload avatar
-    const uploadResult = await uploadFiles(file.buffer);
-    const avatar_url = uploadResult.url;
+    let avatar_url = null;
+    const uploadResult = await uploadFiles(file.buffer.toString('base64'));
+    if(uploadResult){
+      avatar_url = uploadResult.url;
+    }
 
     const newUser = await pool.query(
       "INSERT INTO users (username, password, bio, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *",
