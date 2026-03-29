@@ -64,12 +64,6 @@ require('dotenv').config();
 
 
 
-const bcrypt = require('bcryptjs');
-const pool = require("../db/pool");
-const { uploadFiles } = require("../services/ImageKit");
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-
 exports.registerController = async (req, res) => {
   try {
     console.log("REQ.BODY:", req.body);
