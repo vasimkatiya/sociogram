@@ -66,59 +66,48 @@ require('dotenv').config();
 
 exports.registerController = async (req, res) => {
   try {
-    console.log("REQ.BODY:", req.body);
-    console.log("REQ.FILE:", req.file);
-
     const { username, password, bio } = req.body;
     const file = req.file;
 
-    // Basic validation
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: "Username & password required" });
-    }
-    if (!file) {
-      return res.status(400).json({ success: false, message: "Avatar is required" });
-    }
-
-    // Check if user exists
-    const userExists = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ success: false, message: "Username already taken" });
-    }
+    if (!username || !password) return res.status(400).json({ success: false, message: "Username & password required" });
+    if (!file) return res.status(400).json({ success: false, message: "Avatar is required" });
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    let hashedPassword;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (err) {
+      console.error("Bcrypt error:", err);
+      return res.status(500).json({ success: false, message: "Password hashing failed" });
+    }
 
-    // Upload avatar to ImageKit
+    // Upload avatar
     let avatar_url = null;
     try {
       const uploadResult = await uploadFiles(file.buffer.toString('base64'));
-      console.log("UPLOAD RESULT:", uploadResult);
-      if (uploadResult && uploadResult.url) {
-        avatar_url = uploadResult.url;
-      } else if (uploadResult && uploadResult.thumbnailUrl) {
-        avatar_url = uploadResult.thumbnailUrl;
-      }
+      console.log("ImageKit upload result:", uploadResult);
+      avatar_url = uploadResult.url || uploadResult.thumbnailUrl || null;
     } catch (err) {
-      console.error("IMAGEKIT UPLOAD ERROR:", err);
-      // fallback to null if upload fails
-      avatar_url = null;
+      console.error("ImageKit upload error:", err);
+      avatar_url = null; // fallback
     }
 
-    // Insert new user
-    const newUser = await pool.query(
-      "INSERT INTO users (username, password, bio, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *",
-      [username, hashedPassword, bio || "", avatar_url]
-    );
+    // Insert into DB
+    let newUser;
+    try {
+      newUser = await pool.query(
+        "INSERT INTO users (username, password, bio, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *",
+        [username, hashedPassword, bio || "", avatar_url]
+      );
+    } catch (err) {
+      console.error("DB insert error:", err);
+      return res.status(500).json({ success: false, message: "Database insert failed" });
+    }
 
-    res.status(201).json({
-      success: true,
-      user: newUser.rows[0],
-      message: "User created successfully"
-    });
+    res.status(201).json({ success: true, user: newUser.rows[0], message: "User created successfully" });
 
   } catch (err) {
-    console.error("REGISTER ERROR:", err);
+    console.error("Unexpected register error:", err);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
