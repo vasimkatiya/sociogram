@@ -63,6 +63,10 @@ require('dotenv').config();
 // };
 
 
+const bcrypt = require('bcryptjs');
+const pool = require("../db/pool");
+const { uploadFiles } = require("../services/ImageKit");
+
 exports.registerController = async (req, res) => {
   try {
     console.log("REQ.BODY:", req.body);
@@ -71,63 +75,79 @@ exports.registerController = async (req, res) => {
     const { username, password, bio } = req.body;
     const file = req.file;
 
+    // ✅ Validation
     if (!username || !password) {
-      console.log("Missing username or password");
-      return res.status(400).json({ success: false, message: "Username & password required" });
-    }
-    if (!file) {
-      console.log("Missing avatar file");
-      return res.status(400).json({ success: false, message: "Avatar is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Username & password required"
+      });
     }
 
-    // Check if user exists
-    const userExists = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-    console.log("User exists check:", userExists.rows);
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: "Avatar is required"
+      });
+    }
+
+    // ✅ Check existing user
+    const userExists = await pool.query(
+      "SELECT * FROM users WHERE username = $1",
+      [username]
+    );
 
     if (userExists.rows.length > 0) {
-      console.log("Username already taken");
-      return res.status(400).json({ success: false, message: "Username already taken" });
+      return res.status(400).json({
+        success: false,
+        message: "Username already taken"
+      });
     }
 
-    // Hash password
-    let hashedPassword;
+    // ✅ Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // ✅ Convert file buffer → base64 with prefix (FIXED)
+    let avatar_url = "";
+
     try {
-      hashedPassword = await bcrypt.hash(password, 10);
-      console.log("Password hashed successfully");
+      const base64 = file.buffer.toString("base64");
+      const fileWithPrefix = `data:${file.mimetype};base64,${base64}`;
+
+      const uploadResult = await uploadFiles(fileWithPrefix);
+
+      console.log("UPLOAD RESULT:", uploadResult);
+
+      avatar_url = uploadResult.url; // ✅ correct field
     } catch (err) {
-      console.error("Bcrypt error:", err);
-      return res.status(500).json({ success: false, message: "Password hashing failed" });
+      console.error("Image upload error:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Image upload failed"
+      });
     }
 
-    // Upload avatar
-    let avatar_url = '';
-    try {
-      const uploadResult = await uploadFiles(file.buffer.toString('base64'));
-      console.log("ImageKit upload result:", uploadResult);
-      avatar_url = uploadResult?.url || uploadResult?.thumbnailUrl || '';
-    } catch (err) {
-      console.error("ImageKit upload error:", err);
-      avatar_url = ''; // fallback
-    }
+    // ✅ Insert into DB
+    const newUser = await pool.query(
+      "INSERT INTO users (username, password, bio, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *",
+      [username, hashedPassword, bio || "", avatar_url]
+    );
 
-    // Insert into DB
-    let newUser;
-    try {
-      newUser = await pool.query(
-        "INSERT INTO users (username, password, bio, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *",
-        [username, hashedPassword, bio || '', avatar_url]
-      );
-      console.log("User inserted:", newUser.rows[0]);
-    } catch (err) {
-      console.error("DB insert error:", err);
-      return res.status(500).json({ success: false, message: "Database insert failed" });
-    }
+    console.log("User created:", newUser.rows[0]);
 
-    res.status(201).json({ success: true, user: newUser.rows[0], message: "User created successfully" });
+    // ✅ Success response
+    res.status(201).json({
+      success: true,
+      user: newUser.rows[0],
+      message: "User created successfully"
+    });
 
   } catch (err) {
-    console.error("Unexpected register error:", err);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("REGISTER ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
   }
 };
 
