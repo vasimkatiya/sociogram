@@ -63,14 +63,13 @@ require('dotenv').config();
 // };
 
 
-const bcrypt = require('bcryptjs');
-const pool = require("../db/pool");
-const { uploadFiles } = require("../services/ImageKit");
+
 
 exports.registerController = async (req, res) => {
   try {
     console.log("REQ.BODY:", req.body);
     console.log("REQ.FILE:", req.file);
+console.log('hello');
 
     const { username, password, bio } = req.body;
     const file = req.file;
